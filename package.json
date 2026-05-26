@@ -1,0 +1,13 @@
+{
+  "name": "psba-price-scraper",
+  "version": "1.0.0",
+  "description": "PSBA Daily Rate Comparison - API Harvester",
+  "main": "scraper.js",
+  "scripts": {
+    "start": "node scraper.js",
+    "fetch": "node scraper.js"
+  },
+  "dependencies": {
+    "axios": "^1.7.0"
+  }
+}
