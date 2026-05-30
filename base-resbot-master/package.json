@@ -34,7 +34,7 @@
     "@hapi/boom": "^10.0.1",
     "archiver": "^7.0.1",
     "axios": "^1.12.2",
-    "baileys": "npm:@whiskeysockets/baileys@latest",
+    "baileys": "npm:@itsliaaa/baileys@0.3.11",
     "chalk": "^5.6.2",
     "date-fns": "^4.1.0",
     "fluent-ffmpeg": "^2.1.3",

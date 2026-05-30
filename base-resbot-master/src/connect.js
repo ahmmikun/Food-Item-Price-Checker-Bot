@@ -23,12 +23,23 @@ import {
   clearDirectory,
 } from "./libs/utils.js";
 
-// Inisialisasi logger dan event bus global
 const logger = pino({ level: "silent" });
 const eventBus = new EventEmitter();
 const store = { contacts: {} };
+const reconnectState = new Map();
 
 const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+function normalizePhoneNumber(phoneNumber) {
+  return String(phoneNumber || "").replace(/\D/g, "");
+}
+
+function getReconnectDelay(folder) {
+  const current = reconnectState.get(folder) || 0;
+  const next = Math.min(current + 1, 8);
+  reconnectState.set(folder, next);
+  return Math.min(30000, 2000 * next);
+}
 
 /**
  * Fungsi utama untuk menghubungkan ke WhatsApp via Baileys.
@@ -43,19 +54,29 @@ const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 export default async function connectToWhatsApp({
   folder = "session",
   phoneNumber = null,
-  type_connection = "qr",
+  type_connection = "pairing",
   autoread = true,
 } = {}) {
+  const connectionType = String(type_connection || "pairing").toLowerCase();
+  const normalizedPhone = normalizePhoneNumber(phoneNumber);
+
+  if (connectionType !== "pairing") {
+    throw new Error("This bot is configured for pairing-code login only. Set CONNECTION_TYPE=pairing.");
+  }
+
   const sessionDir = path.join(process.cwd(), folder);
   const { state, saveCreds } = await useMultiFileAuthState(sessionDir);
   const { version } = await fetchLatestBaileysVersion();
+  console.log(chalk.cyan("Using Baileys version:"), chalk.yellow(version.join(".")));
 
   const sock = makeWASocket({
     version,
     logger,
     printQRInTerminal: false,
     auth: state,
-    browser: ["Ubuntu", "Chrome", "20.0.04"],
+    browser: ["PSBA Price Bot", "Chrome", "1.0.0"],
+    markOnlineOnConnect: false,
+    syncFullHistory: false,
   });
 
   sessions.set(folder, sock);
@@ -64,19 +85,15 @@ export default async function connectToWhatsApp({
   sock.downloadQuotedMedia = downloadQuotedMedia;
   sock.clearDirectory = clearDirectory;
 
-  // Pairing mode
-  if (
-    !sock.authState.creds.registered &&
-    type_connection.toLowerCase() === "pairing"
-  ) {
-    if (!phoneNumber) {
-      throw new Error("Nomor telepon wajib diisi untuk mode pairing!");
+  if (!sock.authState.creds.registered) {
+    if (!normalizedPhone) {
+      throw new Error("BOT_PHONE_NUMBER is required for pairing. Example: set BOT_PHONE_NUMBER=923xxxxxxxxx");
     }
 
     await delay(4000);
-    const code = await sock.requestPairingCode(phoneNumber.trim());
+    const code = await sock.requestPairingCode(normalizedPhone);
     const formattedCode = code.slice(0, 4) + "-" + code.slice(4);
-    console.log(chalk.blue("PHONE NUMBER:"), chalk.yellow(phoneNumber));
+    console.log(chalk.blue("PHONE NUMBER:"), chalk.yellow(normalizedPhone));
     console.log(chalk.blue("PAIRING CODE:"), chalk.yellow(formattedCode));
   }
 
@@ -101,7 +118,7 @@ export default async function connectToWhatsApp({
       const result = serializeMessage(m, sock);
       if (!result) return;
 
-      if (autoread) await sock.readMessages([result.message.key]);
+      if (autoread) await sock.readMessages([result.message.key]).catch(() => {});
       eventBus.emit("message", result);
     } catch (e) {
       console.log(chalk.red(`Error handling message: ${e.message}`));
@@ -133,23 +150,29 @@ export default async function connectToWhatsApp({
   sock.ev.on("connection.update", async (update) => {
     const { connection, lastDisconnect, qr } = update;
 
-    if (qr && type_connection === "qr") {
-      qrcode.generate(qr, { small: true });
-      success("QR", "Silakan scan QR melalui aplikasi WhatsApp!");
+    if (qr) {
+      console.log(chalk.yellow("QR login is disabled. Use the printed pairing code instead."));
     }
 
     if (connection === "open") {
+      reconnectState.set(folder, 0);
       eventBus.emit("connected", sock);
     } else if (connection === "close") {
       const reason = new Boom(lastDisconnect?.error)?.output.statusCode;
       eventBus.emit("disconnected", reason);
 
-      // Auto reconnect dengan delay
-      await delay(3000);
+      if (reason === DisconnectReason.loggedOut) {
+        console.log(chalk.red("Session logged out. Delete the session folder and pair again."));
+        return;
+      }
+
+      const waitMs = getReconnectDelay(folder);
+      console.log(chalk.yellow(`Reconnecting in ${Math.round(waitMs / 1000)}s...`));
+      await delay(waitMs);
       return connectToWhatsApp({
         folder,
-        phoneNumber,
-        type_connection,
+        phoneNumber: normalizedPhone,
+        type_connection: connectionType,
         autoread,
       });
     }

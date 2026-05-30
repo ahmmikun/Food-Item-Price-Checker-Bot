@@ -5,7 +5,10 @@
   "main": "scraper.js",
   "scripts": {
     "start": "node scraper.js",
-    "fetch": "node scraper.js"
+    "fetch": "node scraper.js",
+    "bot": "npm --prefix base-resbot-master start",
+    "bot:install": "npm --prefix base-resbot-master install",
+    "bot:check": "node --check base-resbot-master/index.js"
   },
   "dependencies": {
     "axios": "^1.7.0"

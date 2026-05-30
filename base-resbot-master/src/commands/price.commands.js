@@ -26,7 +26,7 @@ import {
 export function handlePriceCommand(content) {
   if (!content || typeof content !== "string") return null;
 
-  const text = content.trim().toLowerCase();
+  const text = content.trim().toLowerCase().replace(/^[.!/#]+/, "");
   const parts = text.split(/\s+/);
   const command = parts[0];
 
@@ -34,8 +34,12 @@ export function handlePriceCommand(content) {
   const dataLoaded = loadPriceData();
 
   // Help command
-  if (command === "help" || command === "menu") {
+  if (command === "help" || command === "menu" || command === "start") {
     return formatHelp();
+  }
+
+  if (command === "ping") {
+    return "Pong. PSBA Price Bot is online.";
   }
 
   // Check data availability for data commands
