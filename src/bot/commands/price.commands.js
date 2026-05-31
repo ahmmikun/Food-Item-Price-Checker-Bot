@@ -10,6 +10,7 @@ import {
 
 import {
   formatRate,
+  formatCaption,
   formatMultipleRates,
   formatTop,
   formatDistricts,
@@ -19,9 +20,9 @@ import {
 } from "../utils/formatter.js";
 
 /**
- * Handle incoming message and return a reply string (or null if not a price command).
+ * Handle incoming message and return a structured response object (or null if not a price command).
  * @param {string} content - The full message text
- * @returns {string|null} - Reply text or null if not handled
+ * @returns {{ type: "text", text: string } | { type: "image", imageUrl: string, caption: string } | null}
  */
 export function handlePriceCommand(content) {
   if (!content || typeof content !== "string") return null;
@@ -35,17 +36,17 @@ export function handlePriceCommand(content) {
 
   // Help command
   if (command === "help" || command === "menu" || command === "start") {
-    return formatHelp();
+    return { type: "text", text: formatHelp() };
   }
 
   if (command === "ping") {
-    return "Pong. PSBA Price Bot is online.";
+    return { type: "text", text: "Pong. PSBA Price Bot is online." };
   }
 
   // Check data availability for data commands
   if (!dataLoaded || !hasData()) {
     if (["rate", "top", "districts", "items"].includes(command)) {
-      return formatError("data_missing");
+      return { type: "text", text: formatError("data_missing") };
     }
     return null;
   }
@@ -53,29 +54,29 @@ export function handlePriceCommand(content) {
   // Districts command
   if (command === "districts") {
     const districts = getDistricts();
-    return formatDistricts(districts);
+    return { type: "text", text: formatDistricts(districts) };
   }
 
   // Items command: items <district>
   if (command === "items") {
     const district = parts.slice(1).join(" ");
     if (!district) {
-      return `❌ District batao.\n\nExample: *items lahore*`;
+      return { type: "text", text: `❌ District batao.\n\nExample: *items lahore*` };
     }
     if (!districtExists(district)) {
-      return formatError("district_not_found");
+      return { type: "text", text: formatError("district_not_found") };
     }
     const items = getItemsByDistrict(district);
     if (items.length === 0) {
-      return formatError("item_not_found");
+      return { type: "text", text: formatError("item_not_found") };
     }
-    return formatItems(district, items);
+    return { type: "text", text: formatItems(district, items) };
   }
 
   // Rate command: rate <item> <district>
   if (command === "rate") {
     if (parts.length < 3) {
-      return `❌ Item aur district dono batao.\n\nExample: *rate tomato lahore*`;
+      return { type: "text", text: `❌ Item aur district dono batao.\n\nExample: *rate tomato lahore*` };
     }
 
     // Last word is district, everything in between is item
@@ -83,32 +84,36 @@ export function handlePriceCommand(content) {
     const item = parts.slice(1, -1).join(" ");
 
     if (!districtExists(district)) {
-      return formatError("district_not_found");
+      return { type: "text", text: formatError("district_not_found") };
     }
 
     const results = findRate(item, district);
     if (results.length === 0) {
-      return formatError("item_not_found");
+      return { type: "text", text: formatError("item_not_found") };
     }
 
     if (results.length === 1) {
-      return formatRate(results[0]);
+      const singleItem = results[0];
+      if (singleItem.image) {
+        return { type: "image", imageUrl: singleItem.image, caption: formatCaption(singleItem) };
+      }
+      return { type: "text", text: formatRate(singleItem) };
     }
 
-    return formatMultipleRates(results, `${item} - ${district}`);
+    return { type: "text", text: formatMultipleRates(results, `${item} - ${district}`) };
   }
 
   // Top command: top <district>
   if (command === "top") {
     const district = parts.slice(1).join(" ");
     if (!district) {
-      return `❌ District batao.\n\nExample: *top lahore*`;
+      return { type: "text", text: `❌ District batao.\n\nExample: *top lahore*` };
     }
     if (!districtExists(district)) {
-      return formatError("district_not_found");
+      return { type: "text", text: formatError("district_not_found") };
     }
     const topItems = getTopSavings(district, 5);
-    return formatTop(district, topItems);
+    return { type: "text", text: formatTop(district, topItems) };
   }
 
   // Not a price command

@@ -1,4 +1,4 @@
-import { connectToWhatsApp } from "./base.js";
+import { connectToWhatsApp, sessions } from "./base.js";
 import { handlePriceCommand } from "./commands/price.commands.js";
 import { loadPriceData } from "./services/priceData.service.js";
 import fs from "fs";
@@ -54,6 +54,44 @@ function logStartup() {
 logStartup();
 loadPriceData();
 
+/**
+ * Send a structured response (text or image) to a WhatsApp chat.
+ * Falls back to text-only if image sending fails.
+ * Uses the latest socket from sessions cache to handle reconnections.
+ */
+async function sendReply(jid, response) {
+  if (!response) return;
+
+  // Always get the latest socket from sessions cache (handles reconnections)
+  const activeSock = sessions.get(SESSION_FOLDER);
+  if (!activeSock) {
+    console.error("No active socket available, cannot send reply");
+    return;
+  }
+
+  if (response.type === "image") {
+    try {
+      await activeSock.sendMessage(jid, {
+        image: { url: response.imageUrl },
+        caption: response.caption,
+      });
+    } catch (err) {
+      console.error("Failed to send image, falling back to text:", err.message);
+      try {
+        await activeSock.sendMessage(jid, { text: response.caption });
+      } catch (fallbackErr) {
+        console.error("Failed to send fallback text:", fallbackErr.message);
+      }
+    }
+  } else {
+    try {
+      await activeSock.sendMessage(jid, { text: response.text });
+    } catch (err) {
+      console.error("Failed to send text reply:", err.message);
+    }
+  }
+}
+
 try {
   const { sock, events } = await connectToWhatsApp({
     folder: SESSION_FOLDER,
@@ -79,7 +117,7 @@ try {
 
       const priceReply = handlePriceCommand(content);
       if (priceReply) {
-        await sock.sendMessage(remoteJid, { text: priceReply });
+        await sendReply(remoteJid, priceReply);
         return;
       }
 

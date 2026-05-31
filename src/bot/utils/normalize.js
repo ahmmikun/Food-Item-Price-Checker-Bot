@@ -24,6 +24,7 @@ export function normalizeData(rawData) {
         itemName: cleanString(row.product || row.itemName || "Unknown"),
         category: cleanString(row.category || ""),
         unit: cleanString(row.unit || ""),
+        image: row.image || "",
         dcRate,
         psbaRate,
         difference: dcRate - psbaRate,
