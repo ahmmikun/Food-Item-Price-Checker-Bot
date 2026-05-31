@@ -1,16 +1,28 @@
 {
-  "name": "psba-price-scraper",
+  "name": "psba-price-bot",
   "version": "1.0.0",
-  "description": "PSBA Daily Rate Comparison - API Harvester",
-  "main": "scraper.js",
+  "description": "PSBA Daily Rate Comparison - Scraper + WhatsApp Bot",
+  "type": "module",
   "scripts": {
-    "start": "node scraper.js",
-    "fetch": "node scraper.js",
-    "bot": "npm --prefix base-resbot-master start",
-    "bot:install": "npm --prefix base-resbot-master install",
-    "bot:check": "node --check base-resbot-master/index.js"
+    "scrape": "node src/scraper/index.js",
+    "bot": "node src/bot/index.js",
+    "start": "node src/bot/index.js"
   },
+  "keywords": ["psba", "price", "whatsapp", "bot", "scraper"],
+  "license": "ISC",
   "dependencies": {
-    "axios": "^1.7.0"
+    "@ffmpeg-installer/ffmpeg": "^1.1.0",
+    "@hapi/boom": "^10.0.1",
+    "archiver": "^7.0.1",
+    "axios": "^1.12.2",
+    "baileys": "npm:@itsliaaa/baileys@0.3.11",
+    "chalk": "^5.6.2",
+    "date-fns": "^4.1.0",
+    "fluent-ffmpeg": "^2.1.3",
+    "moment-timezone": "^0.6.0",
+    "pino": "^10.0.0",
+    "qrcode-terminal": "^0.12.0",
+    "winston": "^3.18.3",
+    "winston-daily-rotate-file": "^5.0.0"
   }
 }

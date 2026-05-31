@@ -1,6 +1,6 @@
 import { connectToWhatsApp } from "./base.js";
-import { handlePriceCommand } from "./src/commands/price.commands.js";
-import { loadPriceData } from "./src/services/priceData.service.js";
+import { handlePriceCommand } from "./commands/price.commands.js";
+import { loadPriceData } from "./services/priceData.service.js";
 import fs from "fs";
 import path from "path";
 
@@ -16,7 +16,10 @@ function loadLocalEnv() {
     if (separator === -1) continue;
 
     const key = trimmed.slice(0, separator).trim();
-    const value = trimmed.slice(separator + 1).trim().replace(/^["']|["']$/g, "");
+    const value = trimmed
+      .slice(separator + 1)
+      .trim()
+      .replace(/^["']|["']$/g, "");
     if (key && process.env[key] === undefined) {
       process.env[key] = value;
     }
@@ -27,6 +30,7 @@ loadLocalEnv();
 
 const SESSION_FOLDER = process.env.SESSION_FOLDER || "session";
 const BOT_PHONE_NUMBER = process.env.BOT_PHONE_NUMBER || "";
+const CONNECTION_TYPE = process.env.CONNECTION_TYPE || "pairing";
 const AUTOREAD = process.env.AUTOREAD !== "false";
 
 function maskPhone(phoneNumber) {
@@ -36,10 +40,14 @@ function maskPhone(phoneNumber) {
 function logStartup() {
   console.log("========================================");
   console.log("PSBA Price WhatsApp Bot");
-  console.log("Login: pairing code only");
+  console.log(`Login: ${CONNECTION_TYPE}`);
   console.log(`Session: ${SESSION_FOLDER}`);
-  console.log(`Phone: ${maskPhone(BOT_PHONE_NUMBER)}`);
-  console.log("Commands: help, districts, items <district>, rate <item> <district>, top <district>");
+  console.log(
+    `Phone: ${CONNECTION_TYPE === "pairing" ? maskPhone(BOT_PHONE_NUMBER) : "N/A (QR mode)"}`
+  );
+  console.log(
+    "Commands: help, districts, items <district>, rate <item> <district>, top <district>"
+  );
   console.log("========================================");
 }
 
@@ -49,7 +57,7 @@ loadPriceData();
 try {
   const { sock, events } = await connectToWhatsApp({
     folder: SESSION_FOLDER,
-    type_connection: "pairing",
+    type_connection: CONNECTION_TYPE,
     phoneNumber: BOT_PHONE_NUMBER,
     autoread: AUTOREAD,
   });
@@ -63,7 +71,8 @@ try {
 
   events.on("message", async (msg) => {
     try {
-      const { remoteJid, sender, content, isQuoted, quotedMessage, message } = msg;
+      const { remoteJid, sender, content, isQuoted, quotedMessage, message } =
+        msg;
       if (!content || typeof content !== "string") return;
 
       console.log(`Message from ${sender}:`, content);
@@ -71,12 +80,6 @@ try {
       const priceReply = handlePriceCommand(content);
       if (priceReply) {
         await sock.sendMessage(remoteJid, { text: priceReply });
-        return;
-      }
-
-      const normalized = content.trim().toLowerCase().replace(/^[.!/#]+/, "");
-      if (normalized === "ping") {
-        await sock.sendMessage(remoteJid, { text: "Pong. PSBA Price Bot is online." });
         return;
       }
 

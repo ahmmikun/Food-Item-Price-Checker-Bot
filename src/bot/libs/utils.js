@@ -15,7 +15,7 @@ import https from "https";
 import { spawn, spawnSync } from "child_process";
 
 // import modul/JSON yang biasanya muncul warning
-import pkg from "../../package.json" with { type: "json" };
+import pkg from "../../../package.json" with { type: "json" };
 import { fileURLToPath } from 'url';
 // Buat __dirname versi ESM
 const __filename = fileURLToPath(import.meta.url);

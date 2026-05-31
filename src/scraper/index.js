@@ -1,9 +1,13 @@
-const axios = require("axios");
-const fs = require("fs");
-const path = require("path");
+import axios from "axios";
+import fs from "fs";
+import path from "path";
+import { fileURLToPath } from "url";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const API_URL = "https://psba.gop.pk:3000/api/public/prices";
-const OUTPUT_DIR = path.join(__dirname, "output");
+const OUTPUT_DIR = path.resolve(__dirname, "../../output");
 
 async function fetchPrices() {
   console.log("Fetching prices from PSBA API...");
@@ -25,6 +29,7 @@ function transformData(raw) {
     product: item.product?.name || "Unknown",
     category: item.product?.category || "Unknown",
     unit: item.product?.unit || "",
+    image: item.product?.image || "",
     district: item.district?.name || "Unknown",
     marketPrice: item.marketPrice,
     psbaPrice: item.psbaPrice,
@@ -48,10 +53,12 @@ function saveCSV(data, filename) {
 
   const headers = Object.keys(data[0]);
   const rows = data.map((row) =>
-    headers.map((h) => {
-      const val = row[h] == null ? "" : String(row[h]);
-      return val.includes(",") ? `"${val}"` : val;
-    }).join(",")
+    headers
+      .map((h) => {
+        const val = row[h] == null ? "" : String(row[h]);
+        return val.includes(",") ? `"${val}"` : val;
+      })
+      .join(",")
   );
 
   const csv = [headers.join(","), ...rows].join("\n");
@@ -66,9 +73,13 @@ function printSummary(data) {
 
   console.log("\n--- PSBA Price Summary ---");
   console.log(`Total records: ${data.length}`);
-  console.log(`Districts: ${districts.length} (${districts.slice(0, 5).join(", ")}${districts.length > 5 ? "..." : ""})`);
+  console.log(
+    `Districts: ${districts.length} (${districts.slice(0, 5).join(", ")}${districts.length > 5 ? "..." : ""})`
+  );
   console.log(`Categories: ${categories.join(", ")}`);
-  console.log(`Date range: ${data[data.length - 1]?.date?.slice(0, 10)} to ${data[0]?.date?.slice(0, 10)}`);
+  console.log(
+    `Date range: ${data[data.length - 1]?.date?.slice(0, 10)} to ${data[0]?.date?.slice(0, 10)}`
+  );
   console.log("--------------------------\n");
 }
 

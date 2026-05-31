@@ -177,7 +177,7 @@ The PSBA Bazaar Scraper is a harvester unit that synchronizes with the Punjab Sa
 
 1. THE Scraper SHALL use `axios` as the HTTP client library, consistent with the existing price scraper
 2. THE Scraper SHALL output files to the project-root `/output` directory using the same naming convention as the existing price scraper: a date-stamped file (`bazaars_YYYY-MM-DD.<ext>`) and a latest-snapshot file (`bazaars_latest.<ext>`)
-3. THE Scraper SHALL be executable via an npm script defined in the project-root `package.json`, with the script name prefixed by `bazaar` (e.g., `npm run bazaar`)
-4. THE Scraper SHALL use CommonJS module format (`require`/`module.exports`) consistent with the existing root-level `scraper.js`
-5. THE Scraper SHALL export its core functions (fetch, transform, save) via `module.exports` for programmatic reuse by other modules
+3. THE Scraper SHALL be executable via an npm script defined in the project-root `package.json` as `"bazaar": "node src/scraper/bazaar.js"` (e.g., `npm run bazaar`)
+4. THE Scraper SHALL use ESM module format (`import`/`export`) consistent with the project's `"type": "module"` setting in `package.json` and the existing price scraper at `src/scraper/index.js`
+5. THE Scraper SHALL export its core functions (fetch, transform, save) via named exports for programmatic reuse by other modules
 6. IF the scraper encounters an unrecoverable error during execution, THEN THE Scraper SHALL log the error to the console and exit with a non-zero process exit code, consistent with the existing price scraper's error handling pattern

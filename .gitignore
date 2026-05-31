@@ -1,3 +1,8 @@
-node_modules
-dist
-build
+node_modules/
+output/
+session/
+tmp/
+logs/
+.env
+*.log
+package-lock.json
