@@ -1,6 +1,6 @@
 import { connectToWhatsApp, sessions } from "./base.js";
 import { handlePriceCommand } from "./commands/price.commands.js";
-import { loadPriceData } from "./services/priceData.service.js";
+import { initPriceService } from "./services/priceData.service.js";
 import fs from "fs";
 import path from "path";
 
@@ -52,7 +52,9 @@ function logStartup() {
 }
 
 logStartup();
-loadPriceData();
+
+// Load district list from PSBA API on startup
+await initPriceService();
 
 /**
  * Send a structured response (text or image) to a WhatsApp chat.
@@ -62,7 +64,6 @@ loadPriceData();
 async function sendReply(jid, response) {
   if (!response) return;
 
-  // Always get the latest socket from sessions cache (handles reconnections)
   const activeSock = sessions.get(SESSION_FOLDER);
   if (!activeSock) {
     console.error("No active socket available, cannot send reply");
@@ -115,7 +116,7 @@ try {
 
       console.log(`Message from ${sender}:`, content);
 
-      const priceReply = handlePriceCommand(content);
+      const priceReply = await handlePriceCommand(content);
       if (priceReply) {
         await sendReply(remoteJid, priceReply);
         return;

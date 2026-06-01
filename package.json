@@ -4,7 +4,6 @@
   "description": "PSBA Daily Rate Comparison - Scraper + WhatsApp Bot",
   "type": "module",
   "scripts": {
-    "scrape": "node src/scraper/index.js",
     "bot": "node src/bot/index.js",
     "start": "node src/bot/index.js"
   },

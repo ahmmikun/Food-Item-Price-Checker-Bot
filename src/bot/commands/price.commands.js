@@ -1,5 +1,4 @@
 import {
-  loadPriceData,
   hasData,
   getDistricts,
   getItemsByDistrict,
@@ -22,17 +21,14 @@ import {
 /**
  * Handle incoming message and return a structured response object (or null if not a price command).
  * @param {string} content - The full message text
- * @returns {{ type: "text", text: string } | { type: "image", imageUrl: string, caption: string } | null}
+ * @returns {Promise<{ type: "text", text: string } | { type: "image", imageUrl: string, caption: string } | null>}
  */
-export function handlePriceCommand(content) {
+export async function handlePriceCommand(content) {
   if (!content || typeof content !== "string") return null;
 
   const text = content.trim().toLowerCase().replace(/^[.!/#]+/, "");
   const parts = text.split(/\s+/);
   const command = parts[0];
-
-  // Reload data on each command (uses cache, only reads file if modified)
-  const dataLoaded = loadPriceData();
 
   // Help command
   if (command === "help" || command === "menu" || command === "start") {
@@ -44,7 +40,7 @@ export function handlePriceCommand(content) {
   }
 
   // Check data availability for data commands
-  if (!dataLoaded || !hasData()) {
+  if (!hasData()) {
     if (["rate", "top", "districts", "items"].includes(command)) {
       return { type: "text", text: formatError("data_missing") };
     }
@@ -66,7 +62,7 @@ export function handlePriceCommand(content) {
     if (!districtExists(district)) {
       return { type: "text", text: formatError("district_not_found") };
     }
-    const items = getItemsByDistrict(district);
+    const items = await getItemsByDistrict(district);
     if (items.length === 0) {
       return { type: "text", text: formatError("item_not_found") };
     }
@@ -87,7 +83,7 @@ export function handlePriceCommand(content) {
       return { type: "text", text: formatError("district_not_found") };
     }
 
-    const results = findRate(item, district);
+    const results = await findRate(item, district);
     if (results.length === 0) {
       return { type: "text", text: formatError("item_not_found") };
     }
@@ -112,7 +108,7 @@ export function handlePriceCommand(content) {
     if (!districtExists(district)) {
       return { type: "text", text: formatError("district_not_found") };
     }
-    const topItems = getTopSavings(district, 5);
+    const topItems = await getTopSavings(district, 5);
     return { type: "text", text: formatTop(district, topItems) };
   }
 

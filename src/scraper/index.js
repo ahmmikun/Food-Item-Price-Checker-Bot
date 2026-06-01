@@ -6,13 +6,38 @@ import { fileURLToPath } from "url";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const API_URL = "https://psba.gop.pk:3000/api/public/prices";
+// Load .env for standalone execution
+function loadEnv() {
+  const envPath = path.resolve(__dirname, "../../.env");
+  if (!fs.existsSync(envPath)) return;
+  const lines = fs.readFileSync(envPath, "utf8").split(/\r?\n/);
+  for (const line of lines) {
+    const trimmed = line.trim();
+    if (!trimmed || trimmed.startsWith("#")) continue;
+    const sep = trimmed.indexOf("=");
+    if (sep === -1) continue;
+    const key = trimmed.slice(0, sep).trim();
+    const value = trimmed.slice(sep + 1).trim().replace(/^["']|["']$/g, "");
+    if (key && process.env[key] === undefined) {
+      process.env[key] = value;
+    }
+  }
+}
+loadEnv();
+
+const API_BASE_URL = "https://psba.gop.pk:3000/api/public/prices";
+const DISTRICT_ID = process.env.DISTRICT_ID || "68a70061dfc07c8ee84ade01";
 const OUTPUT_DIR = path.resolve(__dirname, "../../output");
 
 async function fetchPrices() {
-  console.log("Fetching prices from PSBA API...");
+  const url = DISTRICT_ID
+    ? `${API_BASE_URL}?district=${DISTRICT_ID}`
+    : API_BASE_URL;
 
-  const response = await axios.get(API_URL, {
+  console.log(`Fetching prices from PSBA API (district: ${DISTRICT_ID || "all"})...`);
+  console.log(`URL: ${url}`);
+
+  const response = await axios.get(url, {
     headers: {
       "User-Agent": "PSBA-Price-Monitor/1.0",
       Accept: "application/json",
@@ -83,7 +108,7 @@ function printSummary(data) {
   console.log("--------------------------\n");
 }
 
-async function main() {
+export async function main() {
   try {
     if (!fs.existsSync(OUTPUT_DIR)) {
       fs.mkdirSync(OUTPUT_DIR, { recursive: true });
@@ -105,14 +130,19 @@ async function main() {
     saveCSV(data, "prices_latest.csv");
 
     console.log("Done.");
+    return data;
   } catch (err) {
     console.error("Error fetching prices:", err.message);
     if (err.response) {
       console.error("Status:", err.response.status);
       console.error("Data:", err.response.data);
     }
-    process.exit(1);
+    throw err;
   }
 }
 
-main();
+// Run directly if this is the entry point
+const isDirectRun = process.argv[1] && path.resolve(process.argv[1]) === path.resolve(__filename);
+if (isDirectRun) {
+  main().catch(() => process.exit(1));
+}
